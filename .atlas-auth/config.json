@@ -1,0 +1,8 @@
+{
+  "applicationId": "app_3Kq717YVnpwlYwXtfu7cG2ONv1P",
+  "instanceId": "ins_3Kq7M3Hbp8NY8FglYZKCWFThl8Y",
+  "publishableKey": "pk_live_Y2xlcmsuc3BhcmtsYWIudW5iYy5jYSQ",
+  "issuer": "https://clerk.sparklab.unbc.ca",
+  "origin": "https://sparklab.unbc.ca",
+  "base": "/nhhr/"
+}
