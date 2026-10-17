@@ -1,0 +1,21 @@
+# Applies only inside public_html/nhhr. The WordPress root stays separate.
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /nhhr/
+  # Do not expose Git metadata created by a managed checkout.
+  RewriteRule (^|/)\. - [F,L]
+  # Missing files must stay 404s, not successful HTML responses.
+  RewriteRule ^(?:assets|data|fonts)/ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "^(index|404)\.html$|^release\.json$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
