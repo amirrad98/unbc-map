@@ -33,6 +33,6 @@ function atlasReturnTo(string $value, string $base): string
 {
     if (!str_starts_with($value, $base) || preg_match('/[\\\\\x00-\x20]/', $value)) return $base;
     $path = rawurldecode(explode('?', explode('#', $value, 2)[0], 2)[0]);
-    if (preg_match('~(?:^|/)\.{1,2}(?:/|$)~', $path) || str_starts_with($path, $base . 'sign-in')) return $base;
+    if (preg_match('~(?:^|/)\.{1,2}(?:/|$)~', $path) || (str_starts_with($path, $base . 'sign-in') || str_starts_with($path, $base . 'sign-up'))) return $base;
     return $value;
 }

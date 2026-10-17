@@ -17,15 +17,16 @@ function atlasClerkScripts(array $config, bool $login): string
 window.addEventListener('load', async () => {
   const options = $options;
   const signIn = options.base + 'sign-in';
+  const signUp = options.base + 'sign-up';
   const original = location.pathname + location.search + location.hash;
-  if (options.login && location.pathname !== signIn) {
+  if (options.login && ![signIn, signUp].includes(location.pathname)) {
     location.replace(signIn + '?return_to=' + encodeURIComponent(original));
     return;
   }
   function localReturn(value) {
     try {
       const url = new URL(value || options.base, location.origin);
-      if (url.origin !== location.origin || !url.pathname.startsWith(options.base) || url.pathname.startsWith(signIn)) return options.base;
+      if (url.origin !== location.origin || !url.pathname.startsWith(options.base) || (url.pathname.startsWith(signIn) || url.pathname.startsWith(signUp))) return options.base;
       return url.pathname + url.search + url.hash;
     } catch { return options.base; }
   }
@@ -34,7 +35,8 @@ window.addEventListener('load', async () => {
   try {
     if (!window.Clerk) throw new Error('Sign-in service unavailable');
     await Clerk.load({ui: {ClerkUI: window.__internal_ClerkUICtor},
-      signInUrl: location.origin + signIn,
+      signInUrl: location.origin + signIn + '?return_to=' + encodeURIComponent(returnTo),
+      signUpUrl: location.origin + signUp + '?return_to=' + encodeURIComponent(returnTo),
       signInFallbackRedirectUrl: location.origin + returnTo,
       signUpFallbackRedirectUrl: location.origin + returnTo,
       afterSignOutUrl: location.origin + signIn});
@@ -58,8 +60,9 @@ window.addEventListener('load', async () => {
       Clerk.addListener(({session}) => {if (session) openAtlas();});
       if (Clerk.session) { await openAtlas(); }
       else {
-        message.textContent = 'Sign in with your invited email address. We’ll send you a login code.';
-        Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
+        message.textContent = 'Sign in or create an account with your email address. We’ll send you a verification code.';
+        const mount = location.pathname === signUp ? Clerk.mountSignUp.bind(Clerk) : Clerk.mountSignIn.bind(Clerk);
+        mount(document.getElementById('clerk-sign-in'), {
           routing: 'hash', forceRedirectUrl: location.href,
           appearance: {variables: {colorPrimary: '#00573c'}}
         });
@@ -94,6 +97,6 @@ function atlasLoginPage(array $config): void
 <meta name="robots" content="noindex,nofollow"><title>Sign in · NHHR Atlas</title>
 <style>*{box-sizing:border-box}body{margin:0;background:#f6f5f1;color:#252b29;font:16px/1.6 Arial,Helvetica,sans-serif}header{background:#00573c;border-bottom:6px solid #fdb913;color:#fff;padding:24px max(24px,calc((100vw - 1000px)/2))}header strong{font-size:22px}header p{margin:0;font-size:14px}main{max-width:560px;margin:64px auto;padding:0 24px}h1{font-size:36px;line-height:1.15;margin-bottom:16px}#clerk-sign-in{margin-top:24px}small{display:block;margin-top:28px;color:#59645e}button{cursor:pointer;padding:10px 16px}a{color:#00573c}</style>
 $scripts</head><body><header><strong>NHHR Atlas</strong><p>Northern Hub for Health Research · UNBC</p></header>
-<main><h1>Sign in to the Atlas</h1><p>This website is available to invited NHHR users.</p><p id="auth-status" role="status">Connecting to secure sign-in…</p><div id="clerk-sign-in"></div><button id="auth-sign-out" hidden>Sign out</button><noscript>JavaScript is required to sign in.</noscript><small>Access is by invitation. Contact the NHHR team if you need an account.</small></main></body></html>
+<main><h1>Sign in to the Atlas</h1><p>Sign in to view the Atlas. Anyone can create an account with an email address.</p><p id="auth-status" role="status">Connecting to secure sign-in…</p><div id="clerk-sign-in"></div><button id="auth-sign-out" hidden>Sign out</button><noscript>JavaScript is required to sign in.</noscript><small>New here? Create an account from the sign-in form. We’ll verify your email address.</small></main></body></html>
 HTML;
 }

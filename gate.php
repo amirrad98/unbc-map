@@ -48,9 +48,9 @@ if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
     $token = $match[1];
 }
 $claims = atlasVerifySession(is_string($token) ? $token : '', $config, $pem);
-if (!$claims || $relative === 'sign-in') {
+if (!$claims || in_array($relative, ['sign-in', 'sign-up'], true)) {
     // Assets/data never return the sign-in HTML as a successful download.
-    $document = $relative === '' || $relative === 'sign-in'
+    $document = $relative === '' || in_array($relative, ['sign-in', 'sign-up'], true)
         || ($relative !== 'session' && !preg_match('~^(?:assets|data|fonts|licenses)(?:/|$)~', $relative)
             && (pathinfo($relative, PATHINFO_EXTENSION) === '' || str_ends_with($relative, '.html')));
     if (!$document || isset($_SERVER['HTTP_AUTHORIZATION'])) atlasError(401, 'Sign-in required');
