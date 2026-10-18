@@ -63,9 +63,11 @@ window.addEventListener('load', async () => {
       if (Clerk.session) { await openAtlas(); }
       else {
         message.textContent = 'Sign in or create an account with your email address. We’ll send you a verification code.';
-        const mount = location.pathname === signUp ? Clerk.mountSignUp.bind(Clerk) : Clerk.mountSignIn.bind(Clerk);
+        const signUpPage = location.pathname === signUp;
+        const mount = signUpPage ? Clerk.mountSignUp.bind(Clerk) : Clerk.mountSignIn.bind(Clerk);
         mount(document.getElementById('clerk-sign-in'), {
           routing: 'hash', forceRedirectUrl: location.href,
+          ...(signUpPage ? {} : {withSignUp: true}),
           appearance: {variables: {colorPrimary: '#00573c'}}
         });
       }
@@ -99,6 +101,6 @@ function atlasLoginPage(array $config): void
 <meta name="robots" content="noindex,nofollow"><title>Sign in · NHHR Atlas</title>
 <style>*{box-sizing:border-box}body{margin:0;background:#f6f5f1;color:#252b29;font:16px/1.6 Arial,Helvetica,sans-serif}header{background:#00573c;border-bottom:6px solid #fdb913;color:#fff;padding:24px max(24px,calc((100vw - 1000px)/2))}header strong{font-size:22px}header p{margin:0;font-size:14px}main{max-width:560px;margin:64px auto;padding:0 24px}h1{font-size:36px;line-height:1.15;margin-bottom:16px}#clerk-sign-in{margin-top:24px}small{display:block;margin-top:28px;color:#59645e}button{cursor:pointer;padding:10px 16px}a{color:#00573c}</style>
 $scripts</head><body><header><strong>NHHR Atlas</strong><p>Northern Hub for Health Research · UNBC</p></header>
-<main><h1>Sign in to the Atlas</h1><p>Sign in to view the Atlas. Anyone can create an account with an email address.</p><p id="auth-status" role="status">Connecting to secure sign-in…</p><div id="clerk-sign-in"></div><button id="auth-sign-out" hidden>Sign out</button><noscript>JavaScript is required to sign in.</noscript><small>New here? Create an account from the sign-in form. We’ll verify your email address.</small></main></body></html>
+<main><h1>Sign in to the Atlas</h1><p>Sign in to view the Atlas. Anyone can create an account with an email address.</p><p id="auth-status" role="status">Connecting to secure sign-in…</p><div id="clerk-sign-in"></div><button id="auth-sign-out" hidden>Sign out</button><noscript>JavaScript is required to sign in.</noscript><small>Enter your email to sign in or register. We’ll send a verification code to the address you provide.</small></main></body></html>
 HTML;
 }
