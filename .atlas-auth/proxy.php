@@ -11,7 +11,7 @@ function atlasProxyTarget(string $target): string
         || preg_match('~(?:^|/)\.{1,2}(?:/|$)~', $path)) throw new InvalidArgumentException('Invalid proxy path');
     if ($path !== '' && $path !== '.well-known/jwks.json'
         && !preg_match('~^v1(?:/|$)~', $path)
-        && !preg_match('~^npm/@clerk/(?:clerk-js@6|ui@1)/dist/[a-zA-Z0-9._/-]+$~', $path))
+        && !preg_match('~^npm/@clerk/(?:clerk-js@6(?:\.[0-9]+){0,2}|ui@1(?:\.[0-9]+){0,2})/dist/[a-zA-Z0-9._/-]+$~', $path))
         throw new InvalidArgumentException('Unknown proxy path');
     if (preg_match('~^v1/(?:users|sessions|domains|instances|invitations|webhooks|api_keys|jwks)(?:/|$)~i', $path))
         throw new InvalidArgumentException('Backend API paths are not proxied');
