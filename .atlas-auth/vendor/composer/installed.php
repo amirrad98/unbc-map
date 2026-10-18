@@ -3,7 +3,7 @@
         'name' => 'nhhr/atlas-access',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '0622f2eefcadb3651ee3090c0bd533ae969c0435',
+        'reference' => '2fa4eb154fb145343e0ef77b4d1aa5dc059fec6b',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -22,7 +22,7 @@
         'nhhr/atlas-access' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '0622f2eefcadb3651ee3090c0bd533ae969c0435',
+            'reference' => '2fa4eb154fb145343e0ef77b4d1aa5dc059fec6b',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
