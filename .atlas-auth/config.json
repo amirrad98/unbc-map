@@ -4,5 +4,6 @@
   "publishableKey": "pk_live_Y2xlcmsuc3BhcmtsYWIudW5iYy5jYSQ",
   "issuer": "https://clerk.sparklab.unbc.ca",
   "origin": "https://sparklab.unbc.ca",
+  "proxyUrl": "https://sparklab.unbc.ca/nhhr/__clerk",
   "base": "/nhhr/"
 }

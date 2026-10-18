@@ -22,6 +22,7 @@ try {
     require $runtime . '/vendor/autoload.php';
     require $runtime . '/verify.php';
     require $runtime . '/login.php';
+    require $runtime . '/proxy.php';
     $config = json_decode(file_get_contents($runtime . '/config.json'), true, 32, JSON_THROW_ON_ERROR);
     $pem = file_get_contents($runtime . '/clerk-public-key.pem');
     if (!is_array($config) || !$pem || !openssl_pkey_get_public($pem)) throw new RuntimeException('Invalid auth configuration');
@@ -29,9 +30,15 @@ try {
     atlasError(503, 'Secure access is temporarily unavailable.');
 }
 
-if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'HEAD'], true)) atlasError(405, 'Method not allowed');
 $rawPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 if (!is_string($rawPath) || preg_match('/%(?![a-fA-F0-9]{2})/', $rawPath)) atlasError(400, 'Invalid path');
+$proxyPath = $config['base'] . '__clerk';
+if ($rawPath === $proxyPath || str_starts_with($rawPath, $proxyPath . '/')) {
+    $target = ltrim(substr($rawPath, strlen($proxyPath)), '/');
+    if (isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] !== '') $target .= '?' . $_SERVER['QUERY_STRING'];
+    atlasServeProxy($config, $target);
+}
+if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'HEAD'], true)) atlasError(405, 'Method not allowed');
 $path = rawurldecode($rawPath);
 if (!str_starts_with($path, $config['base']) || preg_match('/[\\\\\x00-\x1f%]/', $path)
     || preg_match('~(?:^|/)\.~', $path)) atlasError(404, 'Not found');

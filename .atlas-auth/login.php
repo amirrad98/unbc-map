@@ -6,13 +6,14 @@ function atlasClerkScripts(array $config, bool $login): string
     $options = json_encode([
         'base' => $config['base'], 'login' => $login,
         'origin' => $config['origin'],
+        'proxyUrl' => $config['proxyUrl'],
         'returnTo' => atlasReturnTo(is_string($_GET['return_to'] ?? null) ? $_GET['return_to'] : $config['base'], $config['base']),
     ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
-    $issuer = htmlspecialchars($config['issuer'], ENT_QUOTES);
+    $frontend = htmlspecialchars($config['proxyUrl'], ENT_QUOTES);
     $pk = htmlspecialchars($config['publishableKey'], ENT_QUOTES);
     return <<<HTML
-<script defer crossorigin="anonymous" src="$issuer/npm/@clerk/ui@1/dist/ui.browser.js"></script>
-<script defer crossorigin="anonymous" data-clerk-publishable-key="$pk" src="$issuer/npm/@clerk/clerk-js@6/dist/clerk.browser.js"></script>
+<script defer crossorigin="anonymous" src="$frontend/npm/@clerk/ui@1/dist/ui.browser.js"></script>
+<script defer crossorigin="anonymous" data-clerk-publishable-key="$pk" data-clerk-proxy-url="$frontend" src="$frontend/npm/@clerk/clerk-js@6/dist/clerk.browser.js"></script>
 <script>
 window.addEventListener('load', async () => {
   const options = $options;
@@ -35,6 +36,7 @@ window.addEventListener('load', async () => {
   try {
     if (!window.Clerk) throw new Error('Sign-in service unavailable');
     await Clerk.load({ui: {ClerkUI: window.__internal_ClerkUICtor},
+      proxyUrl: options.proxyUrl,
       signInUrl: location.origin + signIn + '?return_to=' + encodeURIComponent(returnTo),
       signUpUrl: location.origin + signUp + '?return_to=' + encodeURIComponent(returnTo),
       signInFallbackRedirectUrl: location.origin + returnTo,

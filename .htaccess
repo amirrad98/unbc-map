@@ -5,6 +5,8 @@ DirectoryIndex gate.php
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /nhhr/
+  # Public signing-key discovery is the only hidden-path proxy exception.
+  RewriteRule ^__clerk/\.well-known/jwks\.json$ gate.php [END]
   # Do not expose Git metadata created by a managed checkout.
   RewriteRule (^|/)\. - [F,L]
   # Every path, including stale files left by an older release, needs verification.
