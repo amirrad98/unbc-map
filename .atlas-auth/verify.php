@@ -4,7 +4,7 @@ declare(strict_types=1);
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-/** Offline verification with the production instance's public signing key. */
+/** Offline verification with the selected instance's pinned public signing key. */
 function atlasVerifySession(string $token, array $config, string $pem): ?object
 {
     try {

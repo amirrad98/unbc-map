@@ -1,9 +1,11 @@
 {
+  "environment": "development",
   "applicationId": "app_3Kq717YVnpwlYwXtfu7cG2ONv1P",
-  "instanceId": "ins_3Kq7M3Hbp8NY8FglYZKCWFThl8Y",
-  "publishableKey": "pk_live_Y2xlcmsuc3BhcmtsYWIudW5iYy5jYSQ",
-  "issuer": "https://clerk.sparklab.unbc.ca",
+  "instanceId": "ins_3Kq71ECUP2PoMWnZWg7PYZo3pf6",
+  "publishableKey": "pk_test_cHJvcGVyLWJsdWViaXJkLTExMjQuY2xlcmsuYWNjb3VudHMuZGV2JA",
+  "issuer": "https://proper-bluebird-1124.clerk.accounts.dev",
   "origin": "https://sparklab.unbc.ca",
-  "proxyUrl": "https://sparklab.unbc.ca/nhhr/__clerk",
+  "frontendApiUrl": "https://proper-bluebird-1124.clerk.accounts.dev",
+  "proxyUrl": null,
   "base": "/nhhr/"
 }

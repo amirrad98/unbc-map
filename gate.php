@@ -34,6 +34,8 @@ $rawPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 if (!is_string($rawPath) || preg_match('/%(?![a-fA-F0-9]{2})/', $rawPath)) atlasError(400, 'Invalid path');
 $proxyPath = $config['base'] . '__clerk';
 if ($rawPath === $proxyPath || str_starts_with($rawPath, $proxyPath . '/')) {
+    // Development talks directly to its own FAPI; never load the production secret.
+    if (($config['environment'] ?? 'production') !== 'production') atlasError(404, 'Not found');
     $target = ltrim(substr($rawPath, strlen($proxyPath)), '/');
     if (isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] !== '') $target .= '?' . $_SERVER['QUERY_STRING'];
     atlasServeProxy($config, $target);
