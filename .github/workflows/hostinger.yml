@@ -64,9 +64,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+      # Release validation resolves the manifest with the TypeScript parser.
+      - run: npm install --global npm@11.19.0
+      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           name: hostinger-site
