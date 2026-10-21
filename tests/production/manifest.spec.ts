@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readdir, readFile } from "node:fs/promises";
 import { mockBasemaps } from "../basemap-fixtures";
 import { resolveManifest } from "../../scripts/manifest.mjs";
@@ -14,11 +14,31 @@ const flags = manifest.flags as {
   site: Record<"statusBadges" | "campusLinks" | "sourcesInMenu", boolean>;
 };
 
+async function unlock(page: Page) {
+  await expect(page.getByText("This page is password protected.")).toBeVisible();
+  if (process.env.ATLAS_TEST_PASSWORD) {
+    await page.getByLabel("Password").fill(process.env.ATLAS_TEST_PASSWORD);
+    await page.getByRole("button", { name: "Continue" }).click();
+  } else {
+    if (process.env.CI) throw new Error("Set ATLAS_TEST_PASSWORD to test the published password in CI");
+    // Local checks can use the stored hash; CI must exercise real password entry.
+    const { passwordSha256 } = JSON.parse(await readFile("manifest/access.json", "utf8"));
+    await page.evaluate(([hash, hours]) => localStorage.setItem("nhhr-atlas-access", JSON.stringify({ hash, until: Date.now() + hours * 3600_000 })), [passwordSha256, manifest.flags.rememberHours as number] as const);
+    await page.reload();
+  }
+  await expect(page.getByText("This page is password protected.")).toHaveCount(0);
+}
+
+async function openAtlas(page: Page, url: string) {
+  await page.goto(url);
+  if (flags.locked.atlas) await unlock(page);
+}
+
 test.beforeEach(async ({ page }) => { await mockBasemaps(page); });
 
 test("the stories page lists exactly the stories the manifest switches on", async ({ page }) => {
-  test.skip(!flags.projects.atlas || flags.locked.atlas, "the public Atlas is off or locked");
-  await page.goto(flags.pages.home ? "./stories" : "./");
+  test.skip(!flags.projects.atlas, "the Atlas is not published");
+  await openAtlas(page, flags.pages.home ? "./stories" : "./");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Research stories");
   await expect(page.locator(".atlas-story-card")).toHaveCount(manifest.enabledStories.size);
   await expect(page.locator(".atlas-storymap-card")).toHaveCount(manifest.enabledStoryMaps.size);
@@ -37,15 +57,15 @@ test("switched-off stories are left out of the published files", async ({ page }
   if (process.env.ATLAS_TEST_PASSWORD) expect(bundle).not.toContain(process.env.ATLAS_TEST_PASSWORD);
   if (!flags.pages.sources) for (const text of ["Start at the source.", "What's in this release.", "Read sources and methods"]) expect(bundle, "the switched-off Sources page").not.toContain(text);
   if (!flags.pages.explore) expect(bundle, "the switched-off explorer").not.toContain("Explore the data");
-  test.skip(!off.length || !flags.projects.atlas || flags.locked.atlas, "every story map is on, or the Atlas is locked");
-  await page.goto(`./${off[0]}`);
+  test.skip(!off.length || !flags.projects.atlas, "every story map is on, or the Atlas is not published");
+  await openAtlas(page, `./${off[0]}`);
   await expect(page.getByText("This link does not match a story in the current collection.")).toBeVisible();
 });
 
 test("the explorer offers only the switched-on displays and controls", async ({ page }) => {
-  test.skip(!flags.projects.atlas || flags.locked.atlas || !flags.pages.explore, "the explorer is not published");
+  test.skip(!flags.projects.atlas || !flags.pages.explore, "the explorer is not published");
   test.skip(!manifest.datasets.has("publications"), "the publications dataset is not in this build");
-  await page.goto("./?view=explore&dataset=publications&year=2025&entity=missing&filter.openalex_id=missing&display=map");
+  await openAtlas(page, "./?view=explore&dataset=publications&year=2025&entity=missing&filter.openalex_id=missing&display=map");
   if (!flags.explore.filters) {
     await expect(page.locator(".atlas-filter-panel, .atlas-results-line")).toHaveCount(0);
     await expect(page).not.toHaveURL(/year=|entity=|filter\./);
@@ -63,39 +83,52 @@ test("the explorer offers only the switched-on displays and controls", async ({ 
 });
 
 test("a table that fits on one page has no pagination bar", async ({ page }) => {
-  test.skip(!flags.projects.atlas || flags.locked.atlas || !flags.pages.explore || !manifest.datasets.has("clinical-city"), "the clinical-city table is not published");
-  await page.goto("./?view=explore&dataset=clinical-city&display=table");
+  test.skip(!flags.projects.atlas || !flags.pages.explore || !manifest.datasets.has("clinical-city"), "the clinical-city table is not published");
+  await openAtlas(page, "./?view=explore&dataset=clinical-city&display=table");
   await expect(page.locator(".atlas-data-table tbody tr")).toHaveCount(7);
   await expect(page.locator(".atlas-pagination")).toHaveCount(0);
 });
 
-test("a locked project asks for the password, and asks again once the unlock expires", async ({ page }) => {
-  const locked = (["workspace", "atlas", "campus"] as const).find(name => flags.projects[name] && flags.locked[name]);
-  test.skip(!locked, "no project is behind the password");
-  const url = locked === "workspace" ? "dev/projects" : locked === "campus" ? "campus" : "./";
-  await page.goto(url);
-  await expect(page.getByText("This page is password protected.")).toBeVisible();
-  await expect(page.locator("#atlas-main, .campus-explorer")).toHaveCount(0);
-  await page.getByLabel("Password").fill("not-the-password");
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByRole("alert")).toHaveText("That password is not correct.");
-  // The repository keeps only the hash: type the password when it is supplied,
-  // otherwise unlock as a correct entry would.
-  if (process.env.ATLAS_TEST_PASSWORD) {
-    await page.getByLabel("Password").fill(process.env.ATLAS_TEST_PASSWORD);
+for (const project of ["atlas", "workspace", "campus"] as const) {
+  const root = project === "workspace" ? "./dev/projects" : project === "campus" ? "./campus" : "./";
+  const stories = project === "atlas" && flags.pages.home ? "./stories" : root;
+  const routes = project === "campus" ? [root, "./#place=student-services"] : [
+    root,
+    ...(stories !== root ? [stories] : []),
+    ...(flags.pages.explore ? [`${root}?view=explore`] : []),
+    ...(flags.pages.sources ? [`${root}?view=sources`] : []),
+    ...[...manifest.enabledStories].map(id => `${stories}?story=${id}`),
+    ...[...manifest.enabledStoryMaps].map(id => `${root.replace(/\/$/, "")}/${id}`),
+  ];
+
+  test(`${project} protects every published direct route before unlocking`, async ({ page }) => {
+    test.skip(!flags.projects[project] || !flags.locked[project], "this project is not published behind the password");
+    for (const url of routes) await test.step(url, async () => {
+      await page.goto(url);
+      await expect(page.getByText("This page is password protected.")).toBeVisible();
+      await expect(page.locator("#atlas-main, .app-shell")).toHaveCount(0);
+    });
+  });
+
+  test(`${project} rejects a wrong password, remembers an unlock, and asks again after expiry`, async ({ page }) => {
+    test.skip(!flags.projects[project] || !flags.locked[project], "this project is not published behind the password");
+    await page.goto(root);
+    await expect(page.getByText("This page is password protected.")).toBeVisible();
+    await page.getByLabel("Password").fill("not-the-password");
     await page.getByRole("button", { name: "Continue" }).click();
-  } else {
-    const { passwordSha256 } = JSON.parse(await readFile("manifest/access.json", "utf8"));
-    await page.evaluate(([hash, hours]) => localStorage.setItem("nhhr-atlas-access", JSON.stringify({ hash, until: Date.now() + hours * 3600_000 })), [passwordSha256, manifest.flags.rememberHours as number] as const);
+    await expect(page.getByRole("alert")).toHaveText("That password is not correct.");
+    await expect(page.locator("#atlas-main, .app-shell")).toHaveCount(0);
+    await unlock(page);
+    await expect(page.locator(project === "campus" ? ".app-shell" : "#atlas-main")).toBeVisible();
     await page.reload();
-  }
-  await expect(page.getByText("This page is password protected.")).toHaveCount(0);
-  await page.reload();
-  await expect(page.getByText("This page is password protected.")).toHaveCount(0);
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("nhhr-atlas-access")!));
-  expect(saved.until - Date.now()).toBeGreaterThan(manifest.flags.rememberHours as number * 3600_000 - 60_000);
-  expect(saved.until - Date.now()).toBeLessThanOrEqual(manifest.flags.rememberHours as number * 3600_000);
-  await page.evaluate(() => localStorage.setItem("nhhr-atlas-access", JSON.stringify({ ...JSON.parse(localStorage.getItem("nhhr-atlas-access")!), until: Date.now() - 1 })));
-  await page.reload();
-  await expect(page.getByText("This page is password protected.")).toBeVisible();
-});
+    await expect(page.getByText("This page is password protected.")).toHaveCount(0);
+    await expect(page.locator(project === "campus" ? ".app-shell" : "#atlas-main")).toBeVisible();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("nhhr-atlas-access")!));
+    expect(saved.until - Date.now()).toBeGreaterThan(manifest.flags.rememberHours as number * 3600_000 - 60_000);
+    expect(saved.until - Date.now()).toBeLessThanOrEqual(manifest.flags.rememberHours as number * 3600_000);
+    await page.evaluate(() => localStorage.setItem("nhhr-atlas-access", JSON.stringify({ ...JSON.parse(localStorage.getItem("nhhr-atlas-access")!), until: Date.now() - 1 })));
+    await page.reload();
+    await expect(page.getByText("This page is password protected.")).toBeVisible();
+    await expect(page.locator("#atlas-main, .app-shell")).toHaveCount(0);
+  });
+}

@@ -94,7 +94,7 @@ npm run test:production
 
 ### The password gate
 
-Projects marked `"password": true` in `manifest/projects.json` (currently `/dev/projects`) ask for a password, and an unlock lasts four hours in that browser. The repository is public, so `manifest/access.json` stores only the password's SHA-256, which the built site carries anyway; the password itself is never committed. Share it with collaborators directly. To change it, then rebuild and push:
+Projects marked `"password": true` in `manifest/projects.json` (currently all three: the Atlas, workspace and campus) ask for a password, including the home page and direct story links. One unlock lasts four hours across these projects in that browser. The repository is public, so `manifest/access.json` stores only the password's SHA-256, which the built site carries anyway; the password itself is never committed. Share it with collaborators directly. To change it, then rebuild and push:
 
 ```sh
 npm run manifest:password -- <new password>

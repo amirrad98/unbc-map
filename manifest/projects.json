@@ -1,5 +1,5 @@
 {
-  "atlas": { "enabled": true, "password": false },
+  "atlas": { "enabled": true, "password": true },
   "workspace": { "enabled": true, "password": true },
-  "campus": { "enabled": true, "password": false }
+  "campus": { "enabled": true, "password": true }
 }

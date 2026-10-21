@@ -18,9 +18,11 @@ SHA-256 is in `manifest/access.json`. A missing or mismatched secret fails the
 deployment. To change the password, run `npm run manifest:password -- <password>`
 and update that secret before pushing. The password is not committed.
 
-All `manifest/` switches retain their configured values. Currently the public
-Atlas and campus are unlocked; `/dev/projects` asks for the password and remembers
-access for four hours. This is the existing browser password gate described in
+All three projects now require the password: the Atlas home and story pages,
+the workspace at `/dev/projects`, and campus. All other `manifest/` switches
+retain their configured values. One unlock remembers access for four hours
+across the projects in that browser; use a fresh private window to check the
+initial prompt. This is the existing browser password gate described in
 [the manifest guide](../manifest/README.md#accessjson-the-password), not server
 authentication. The deployment replaces the earlier Clerk/PHP release; stale PHP,
 proxy and hidden paths are denied by the subfolder's new `.htaccess`.
@@ -50,8 +52,10 @@ curl -fsSL https://sparklab.unbc.ca/nhhr/release.json
 
 The live `source` must equal the successful workflow's source commit and `base`
 must be `/nhhr/`. Check the home page, a directly loaded enabled story, an enabled
-nested workspace route, campus, and the entry page's asset URLs. Check that the
-workspace rejects an incorrect password and accepts the intended password.
+nested workspace route, campus, and the entry page's asset URLs. In fresh browser
+sessions, check that every project asks for the password, rejects an incorrect
+password, and accepts the intended password. Include the legacy `/#place=…`
+campus link and confirm the configured options after unlocking.
 Hidden paths such as `/nhhr/.git/config` and `/nhhr/.atlas-auth/config.json`, and
 obsolete `gate.php`/`__clerk` paths, must be denied or absent. The root WordPress
 homepage should keep its title and return HTTP 200.
