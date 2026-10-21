@@ -1,20 +1,31 @@
-# Applies only inside public_html/nhhr. The WordPress root stays separate.
+# Install only in public_html/nhhr; the WordPress root is separate.
 Options -Indexes -MultiViews
-DirectoryIndex gate.php
+DirectoryIndex index.html
+
+<FilesMatch "(?i)\.(php[0-9]*|phtml|phar)(\..*)?$">
+  Require all denied
+</FilesMatch>
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /nhhr/
-  # Public signing-key discovery is the only hidden-path proxy exception.
-  RewriteRule ^__clerk/\.well-known/jwks\.json$ gate.php [END]
-  # Do not expose Git metadata created by a managed checkout.
+  RewriteCond %{REQUEST_URI} !^/nhhr(/|$)
+  RewriteRule ^ - [F,L]
+  # Block managed-checkout metadata and obsolete Clerk/PHP entry points,
+  # including files left on hosting by an earlier release.
   RewriteRule (^|/)\. - [F,L]
-  # Every path, including stale files left by an older release, needs verification.
-  RewriteRule ^gate\.php$ - [L]
-  RewriteRule ^ gate.php [END]
+  RewriteRule ^__clerk(/|$) - [F,L,NC]
+  RewriteRule \.(php[0-9]*|phtml|phar)(/|$) - [F,L,NC]
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  RewriteRule ^(assets|data)/ - [R=404,L]
+  RewriteRule ^ index.html [L]
 </IfModule>
 
 <IfModule mod_headers.c>
-  Header always set Cache-Control "private, no-store, max-age=0"
   Header always set X-Robots-Tag "noindex, nofollow"
+  <FilesMatch "^(index\.html|404\.html|release\.json|atlas-build\.json)$">
+    Header always set Cache-Control "no-cache"
+  </FilesMatch>
 </IfModule>
