@@ -100,9 +100,14 @@ Projects marked `"password": true` in `manifest/projects.json` (currently `/dev/
 npm run manifest:password -- <new password>
 ```
 
+Also update the repository Actions secret `NHHR_TEST_PASSWORD` to the same
+password. The Hostinger workflow checks that it matches the stored hash and
+tests real password entry before publishing. This does not change which
+projects require a password.
+
 The gate is a safeguard against casual visitors, not security: everything behind it still ships in the public JavaScript. See [manifest/README.md](manifest/README.md#accessjson-the-password).
 
-The build emits direct entry pages for `stories`, `dev/projects`, each switched-on guided story route (at the root and under `dev/projects`), and `campus`, as `manifest/` publishes them, plus a `404.html` SPA fallback. Assets use the configured absolute base. Pushes to `main` build with the configured Pages base path and deploy in about two minutes (`.github/workflows/pages.yml`). The browser checks run separately on every push, under the same `/<repository>/` subpath and split across four runners (`.github/workflows/tests.yml`); a failure marks the commit but does not hold or undo the deploy. That suite runs on a build with every manifest switch on, and a separate job checks the published manifest. Before pushing, run `npm run build:all && npm test`, then `npm run build && npm run test:production`. The configured repository currently serves `/unbc-map/`.
+The build emits direct entry pages for `stories`, `dev/projects`, each switched-on guided story route (at the root and under `dev/projects`), and `campus`, as `manifest/` publishes them, plus a `404.html` SPA fallback. Assets use the configured absolute base. Pushes to `main` build the published manifest at `/nhhr/`, test its options and password, and publish compiled files to `hostinger-nhhr` (`.github/workflows/hostinger.yml`). Hostinger deploys that branch to [SparkLab NHHR](https://sparklab.unbc.ca/nhhr/). See [the deployment guide](docs/hostinger.md) for setup and verification. The broader browser suite still runs separately on every push under `/<repository>/`, split across four runners (`.github/workflows/tests.yml`). That suite uses every manifest switch; its separate production job checks the published manifest. Before pushing, run `npm run build:all && npm test`, then `npm run build && npm run test:production`.
 
 The browser checks cover the evidence explorer, URL state, filters and exports, live WebGL boundary rendering and source joins, responsive layouts, and the retained campus explorer. Local map geometry works without a remote basemap. Data snapshots are deliberately static: opening the application does not refresh Zoer or claim that an old source extraction is current.
 

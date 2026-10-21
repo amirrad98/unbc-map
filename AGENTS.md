@@ -23,8 +23,10 @@ before touching the guided stories or their maps.
 - Under heavy parallelism a few basemap-readiness checks can time out on
   software WebGL. Rerun a failure alone and compare with `main` at the same
   parallelism before calling it a regression; never raise timeouts to hide one.
-- Pushing `main` deploys GitHub Pages in about two minutes; the browser checks
-  run separately and do not hold the deploy.
+- Pushing `main` builds the published manifest for Hostinger at `/nhhr/` and
+  publishes `hostinger-nhhr` after deployment and production browser checks pass.
+  Never publish `build:all`; it enables disabled options and bypasses passwords.
+  See [docs/hostinger.md](docs/hostinger.md) for the destination and verification.
 
 ## Data
 

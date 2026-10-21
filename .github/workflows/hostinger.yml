@@ -1,0 +1,79 @@
+name: Deploy SparkLab NHHR
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hostinger-nhhr
+  cancel-in-progress: false
+env:
+  ATLAS_BASE_PATH: /nhhr/
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.19.0
+      - run: npm ci
+      - name: Check deployment packaging and publication
+        run: node --test scripts/test-hostinger.mjs
+      # build:all deliberately bypasses the manifest switches and password.
+      - name: Build the published manifest
+        run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Verify the published options and password
+        env:
+          ATLAS_TEST_PASSWORD: ${{ secrets.NHHR_TEST_PASSWORD }}
+        run: |
+          node --input-type=module <<'JS'
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          const password = process.env.ATLAS_TEST_PASSWORD;
+          const access = JSON.parse(readFileSync('manifest/access.json', 'utf8'));
+          if (!password || createHash('sha256').update(password).digest('hex') !== access.passwordSha256)
+            throw new Error('Set NHHR_TEST_PASSWORD to the password matching manifest/access.json');
+          JS
+          npm run test:production -- --workers=3
+      - name: Prepare the Hostinger release
+        run: node scripts/prepare-hostinger.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hostinger-site
+          path: dist
+          include-hidden-files: true
+          retention-days: 7
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hostinger-test-results
+          path: test-results
+          retention-days: 7
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: hostinger-site
+          path: dist
+      - name: Confirm this is still the latest source
+        run: |
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA"
+      - name: Publish compiled files for Hostinger
+        run: bash scripts/publish-hostinger.sh

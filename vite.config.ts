@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { flagDefines, manifestFiles, resolveManifest, stripContent, stripHome, stripSnapshot } from "./scripts/manifest.mjs";
+import { buildReceipt } from "./scripts/prepare-hostinger.mjs";
 
 /**
  * manifest/ decides what a build contains. Its switches become literal FLAGS
@@ -9,10 +10,16 @@ import { flagDefines, manifestFiles, resolveManifest, stripContent, stripHome, s
  */
 function atlasManifest(): Plugin {
   const manifest = resolveManifest();
+  let base = "/";
   return {
     name: "atlas-manifest",
     enforce: "pre",
     config: () => ({ define: flagDefines(manifest.flags) }),
+    configResolved(config) { base = config.base; },
+    generateBundle() {
+      // Deployment checks the build's actual settings, including build:all.
+      this.emitFile({ type: "asset", fileName: "atlas-build.json", source: JSON.stringify(buildReceipt(manifest, base)) });
+    },
     configureServer(server) {
       server.watcher.add(manifestFiles);
       server.watcher.on("change", file => { if (manifestFiles.includes(file)) server.restart(); });
